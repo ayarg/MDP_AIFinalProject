@@ -18,9 +18,7 @@ class MDPState :
             return(self.name + ' GOAL')
         else :
             return(self.name)
-
-
-
+        
 # Representation of an action
 class MDPAction : 
     """This object represent an action in the MDP indentified by a cost or reward and its unique name"""
