@@ -18,7 +18,9 @@ class MDPState :
             return(self.name + ' GOAL')
         else :
             return(self.name)
-        
+
+
+
 # Representation of an action
 class MDPAction : 
     """This object represent an action in the MDP indentified by a cost or reward and its unique name"""
@@ -128,7 +130,8 @@ class MDPTransitionsContainer :
             cost = mylist[0].action.cost   # my_list contains every transition from state_from using action action
             sum = cost
             for t in mylist :              # t is a Transition from my_list 
-                sum = sum + t.probability * V[t.state_to.name]
+                if t.state_to.name in V.keys() :
+                    sum = sum + t.probability * V[t.state_to.name]
             if (sum < minimum):
                 optimalAction = myaction
                 minimum = sum 
@@ -173,12 +176,13 @@ class MDPSystem :
         err = 3*eps
         iter = 0 
         while (err > eps and iter<30): 
+            err = 0
             for myState, myContainer in dico.items() :
                 W[myState]=myContainer.iterExpectedCost(V)
                 err = max(err, abs(V[myState]-W[myState]))
             V=W.copy()
             iter += 1
-        print('expected policy', V)
+        print('expected policy', V, 'err', err)
         return V 
     
     def optimalPolicy (self, eps:float) -> dict :
@@ -191,7 +195,7 @@ class MDPSystem :
         PI = {}
         for key , container in self.dico.items() : 
             PI[key] = container.optimalPolicyState(V)
-
+        print('optimal policy :',PI)
         return PI
         
 
