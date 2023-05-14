@@ -114,7 +114,7 @@ class MDPTransitionsContainer :
                         sum = sum + t.probability * V[t.state_to.name]
                         #print('sum : ',sum)
                 minimum = min(minimum, sum) 
-            print(self.state_from.name, minimum )
+            #print(self.state_from.name, minimum )
             return minimum
             
         else : 
@@ -124,17 +124,20 @@ class MDPTransitionsContainer :
         """This function return the optimal policy of one state knowing the expected cost
         the optimal policy is computed using Belllman equation """
         #TO DO if state_from == goal, return actionNuLL
-        #minimum = #initialize Vi+1 to Vi bcs Vi+1=<Vi
-        minimum = 20
-        for myaction, mylist in self.Transitions.items():
-            cost = mylist[0].action.cost   # my_list contains every transition from state_from using action action
-            sum = cost
-            for t in mylist :              # t is a Transition from my_list 
-                if t.state_to.name in V.keys() :
-                    sum = sum + t.probability * V[t.state_to.name]
-            if (sum < minimum):
-                optimalAction = myaction
-                minimum = sum 
+        minimum =  10000000000000000000000000000
+        if (self.state_from.goal == True) :
+            optimalAction  = 'not assigned'
+        else :
+            for myaction, mylist in self.Transitions.items():
+                cost = mylist[0].action.cost   # my_list contains every transition from state_from using action action
+                sum = cost
+                for t in mylist :              # t is a Transition from my_list 
+                    t : MDPTransition
+                    if t.state_to.name in V.keys() :
+                        sum = sum + t.probability * V[t.state_to.name]
+                if (sum <= minimum):
+                    optimalAction = myaction
+                    minimum = sum 
         return optimalAction     
     
         
@@ -143,14 +146,21 @@ class MDPTransitionsContainer :
 class MDPSystem :
     """ The main class of the package. MDPSystem """
 
-    dico={}
-    eps =0.1
-    #def __init__(self) : 
-    #    self.dico={}
+    def __init__(self, eps) : 
+        self.dico={}
+        self.eps = eps
+        self.states = set ()
 
-    def __add_MDPTransitionsContainer__ (self, container : MDPTransitionsContainer):
+
+    def __addTransitionsContainer__ (self, container : MDPTransitionsContainer):
         self.dico[container.state_from.name]=container
-        print('container', container.__str__(), 'added')
+        #print('container', container.__str__(), 'added')
+
+    def __addTransition__(self,t : MDPTransition):
+        if (t.state_from.name not in self.dico):
+            container = MDPTransitionsContainer(t.state_from)
+            self.__addTransitionsContainer__(container)
+        self.dico[t.state_from.name].__addTransition__(t)
 
     def __remove_MDPTransitionsContainer__ (self, name_state : str):
         del self.dico[name_state]
@@ -159,46 +169,81 @@ class MDPSystem :
         char = 'Le system est composé de : ' +'\n'
         for key, container in self.dico.items():
             char += '\n'+ container.__str__()
-        print (char)
+        return char
 
 
-    def expectedPolicy (dico : dict, eps : float)->dict :
+    def expectedPolicy (self)->dict :
         """Compute the expected Policy for each state of the MDP using bellman equation
         input : a dict  state_name : MDPTransitionContainer of the state 
         output : a dict state_name : V(state)"""
     
-        #TO DO : check eps>0
+        # TO DO : check eps>0
 
         V={}
-        for key in dico : 
+        for key in self.dico : 
             V[key] = 0
         W = V.copy()
-        err = 3*eps
+        err = 3*self.eps
         iter = 0 
-        while (err > eps and iter<30): 
+        while (err > self.eps and iter<30): 
             err = 0
-            for myState, myContainer in dico.items() :
-                W[myState]=myContainer.iterExpectedCost(V)
-                err = max(err, abs(V[myState]-W[myState]))
+            for myState, myContainer in self.dico.items() :
+                if (myContainer.state_from.goal == True):
+                    W[myState] = 0                     
+                else :
+                    W[myState]=myContainer.iterExpectedCost(V)
+                    err = max(err, abs(V[myState]-W[myState]))
+                    
             V=W.copy()
             iter += 1
-        print('expected policy', V, 'err', err)
+        #print('expected policy', V, 'err', err)
         return V 
     
-    def optimalPolicy (self, eps:float) -> dict :
+    def optimalPolicy (self) -> dict :
         """Compute the Optimal Policy of all states using bellman equation 
         input : a dict  state_name : MDPTransitionContainer of the state 
         output : a dict state_name : PI(state)"""
         
-        V =  self.expectedPolicy (self.dico, eps)
+        V =  self.expectedPolicy ()
 
         PI = {}
         for key , container in self.dico.items() : 
             PI[key] = container.optimalPolicyState(V)
-        print('optimal policy :',PI)
+        #print('optimal policy :',PI)
         return PI
-        
+    
+    def __readMDP__(self, path, eps):
+        """read a txt file and initialize an MDPSystem"""
+        # TO DO rewrite the comment 
+        self.dico={}
+        self.eps = eps
+        self.states = set ()
+        with open(path, 'r') as file : 
+            file.readline() # read of the first useless line GOAL
+            goal = file.readline()[:-1] # read the goal while removing end of line character
+            file.readline() # read of the 3rd line
+            for line in file :
+                splitline = line[:-1].split('-')
+                # print(splitline)
+                state_from_name = splitline[0] 
+                action_name = splitline[1]
+                action_cost = float(splitline[2])
+                state_to_name = splitline[3]
+                proba = float(splitline[4])
+                state_from = MDPState(state_from_name, state_from_name==goal)
+                state_to = MDPState(state_to_name, state_to_name==goal)
+                action = MDPAction(action_name, action_cost)
+                
+                transition = MDPTransition(state_from, state_to, action, proba) 
+                self.__addTransition__(transition)
 
 
-        
+
+
+
+
+
+
+            
+
 
